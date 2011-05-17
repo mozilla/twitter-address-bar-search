@@ -2,9 +2,12 @@
 <r:RDF xmlns="http://www.mozilla.org/2004/em-rdf#"
        xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <r:Description about="urn:mozilla:install-manifest">
+    <creator>Twitter</creator>
+    <description>Use Twitter to search for #hashtag and @mention from the address bar.</description>
+    <homepageURL>https://twitter.com/</homepageURL>
     <id>twitter.address.bar.search@firefox.twitter</id>
     <name>Twitter Address Bar Search</name>
-    <version>0</version>
+    <version>1</version>
 
     <bootstrap>true</bootstrap>
     <type>2</type>
