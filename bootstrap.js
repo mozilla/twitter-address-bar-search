@@ -37,6 +37,8 @@
 "use strict";
 const global = this;
 
+const TAB_ATTR_NAME = "data-twitter";
+
 const {classes: Cc, interfaces: Ci, manager: Cm, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -245,32 +247,51 @@ function addTwitterSearchEngine() {
 
 // Make sure the window has an app tab set to Twitter
 function ensureTwitterAppTab(window) {
-  // Only bother if we were just installed and support app tabs
-  if (!justInstalled || platform != "desktop")
+  // Only bother continuing if support app tabs
+  if (platform != "desktop")
     return;
 
   // Try again after a short delay if session store is initializing
-  let {__SSi, __SS_restoreID, gBrowser, setTimeout} = window;
+  let {__SSi, __SS_restoreID, gBrowser, setTimeout, document} = window;
   if (__SSi == null || __SS_restoreID != null) {
     setTimeout(function() ensureTwitterAppTab(window), 1000);
     return;
   }
+
+  // TODO: need user pref to control this..
+  // Listens to tab selection events
+  function twitterTabSelected() {
+    if (gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME))
+      document.documentElement.setAttribute("disablechrome", "true");
+    else
+      document.documentElement.removeAttribute("disablechrome");
+  };
+
+  let container = gBrowser.tabContainer;
+  // Adding tab selection listener
+  container.addEventListener("TabSelect", twitterTabSelected, false);
+  // Removes the tab selection listener
+  unload(function() container.removeEventListener("TabSelect", twitterTabSelected, false));
 
   // Figure out if we already have a pinned twitter
   let twitterTab = findOpenTab(gBrowser, function(tab, URI) {
     return tab.pinned && URI.host == "twitter.com";
   });
 
-  // Always remove the twitter tab when uninstalling
-  unload(function() gBrowser.removeTab(twitterTab));
-
   // No need to add!
-  if (twitterTab != null)
-    return;
+  if (!justInstalled && !twitterTab) {
+    // Add the tab and pin it as the last app tab
+    twitterTab = gBrowser.addTab(getTwitterBase("", "apptab"));
+    gBrowser.pinTab(twitterTab);
+  }
 
-  // Add the tab and pin it as the last app tab
-  twitterTab = gBrowser.addTab(getTwitterBase("", "apptab"));
-  gBrowser.pinTab(twitterTab);
+  if (twitterTab) {
+    // Add attribute that'll flag this tab as the one we care about
+    twitterTab.setAttribute(TAB_ATTR_NAME, "true");
+
+    // Removes the twitter tab when uninstalling
+    unload(function() gBrowser.removeTab(twitterTab));
+  }
 }
 
 // Open a new tab for the landing page and select it
