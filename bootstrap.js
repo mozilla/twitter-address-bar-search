@@ -260,18 +260,35 @@ function ensureTwitterAppTab(window) {
 
   // TODO: need user pref to control this..
   // Listens to tab selection events
-  function twitterTabSelected() {
-    if (gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME))
-      document.documentElement.setAttribute("disablechrome", "true");
-    else
+  function twitterTabSelected(aEvt, aDisable) {
+    var hasAttr = gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
+    if (!hasAttr || aDisable)
       document.documentElement.removeAttribute("disablechrome");
+    else if (hasAttr)
+      document.documentElement.setAttribute("disablechrome", "true");
   };
+
+  window.TwitterAddressBarSearch_openLocation
+      = twitterTabSelected.bind(null, null, true);
+
+  var command = document.getElementById("Browser:OpenLocation");
+  command.setAttribute("oncommand",
+      "TwitterAddressBarSearch_openLocation();" + command.getAttribute("oncommand"));
 
   let container = gBrowser.tabContainer;
   // Adding tab selection listener
-  container.addEventListener("TabSelect", twitterTabSelected, false);
-  // Removes the tab selection listener
-  unload(function() container.removeEventListener("TabSelect", twitterTabSelected, false));
+  container.addEventListener("TabSelect", twitterTabSelected, true);
+
+  unload(function() {
+    // Removes the tab selection listener
+    container.removeEventListener("TabSelect", twitterTabSelected, true);
+
+    // Cleaning up the open location command modification
+    command.setAttribute("oncommand",
+        command.getAttribute("oncommand").replace(/TwitterAddressBarSearch_openLocation\(\);/, ""));
+    delete window["TwitterAddressBarSearch_openLocation"];
+  });
+
 
   // Figure out if we already have a pinned twitter
   let twitterTab = findOpenTab(gBrowser, function(tab, URI) {
