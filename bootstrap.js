@@ -252,7 +252,8 @@ function ensureTwitterAppTab(window) {
     return;
 
   // Try again after a short delay if session store is initializing
-  let {__SSi, __SS_restoreID, gBrowser, setTimeout, document} = window;
+  let {__SSi, __SS_restoreID, gBrowser, setTimeout, document, XULBrowserWindow}
+      = window;
   if (__SSi == null || __SS_restoreID != null) {
     setTimeout(function() ensureTwitterAppTab(window), 1000);
     return;
@@ -260,16 +261,36 @@ function ensureTwitterAppTab(window) {
 
   // TODO: need user pref to control this..
   // Listens to tab selection events
-  function twitterTabSelected(aEvt, aDisable) {
-    var hasAttr = gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
-    if (!hasAttr || aDisable)
+  function switchChrome(aDisable, aHasAttr) {
+    aHasAttr = aHasAttr || gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
+    if (!aHasAttr || aDisable)
       document.documentElement.removeAttribute("disablechrome");
-    else if (hasAttr)
+    else if (aHasAttr)
       document.documentElement.setAttribute("disablechrome", "true");
   };
+  var oldFunc;
+  function rmOldFunc() {
+    if (oldFunc) {
+      XULBrowserWindow.hideChromeForLocation = oldFunc;
+      oldFunc = null;
+    }
+  }
+  function twitterTabSelected(aEvt) {
+    var hasAttr = gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
+    switchChrome(false, hasAttr);
+    if (hasAttr) {
+      rmOldFunc();
+      oldFunc = XULBrowserWindow.hideChromeForLocation;
+      XULBrowserWindow.hideChromeForLocation = function(aURL) {
+        return /^https?:\/\/(?:\w+\.)?twitter.com/i.test(aURL)
+            || oldFunc.apply(XULBrowserWindow, aURL);
+      }
+    } else {
+      rmOldFunc();
+    }
+  }
 
-  window.TwitterAddressBarSearch_openLocation
-      = twitterTabSelected.bind(null, null, true);
+  window.TwitterAddressBarSearch_openLocation = switchChrome.bind(null, true);
 
   var command = document.getElementById("Browser:OpenLocation");
   command.setAttribute("oncommand",
@@ -287,6 +308,10 @@ function ensureTwitterAppTab(window) {
     command.setAttribute("oncommand",
         command.getAttribute("oncommand").replace(/TwitterAddressBarSearch_openLocation\(\);/, ""));
     delete window["TwitterAddressBarSearch_openLocation"];
+
+    // If the twitter app tab is the currently selected tab by some chance, then
+    // restore the XULBrowserWindow.hideChromeForLocation
+    rmOldFunc();
   });
 
 
