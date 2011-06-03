@@ -306,6 +306,11 @@ function ensureTwitterAppTab(window) {
     // Add attribute that'll flag this tab as the one we care about
     twitterTab.setAttribute(TAB_ATTR_NAME, "true");
 
+    // disable chrome now if the current tab is the twitter app tab
+    if (gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME)) {
+      document.documentElement.setAttribute("disablechrome", "true");
+    }
+
     // Removes the twitter tab when uninstalling
     unload(function() gBrowser.removeTab(twitterTab));
   }
