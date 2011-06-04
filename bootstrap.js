@@ -320,8 +320,8 @@ function ensureTwitterAppTab(window) {
     return tab.pinned && URI.host == "twitter.com";
   });
 
-  // No need to add!
-  if (!justInstalled && !twitterTab) {
+  // Only add the app tab if one DNE already and the ext was just insatlled
+  if (justInstalled && !twitterTab) {
     // Add the tab and pin it as the last app tab
     twitterTab = gBrowser.addTab(getTwitterBase("", "apptab"));
     gBrowser.pinTab(twitterTab);
