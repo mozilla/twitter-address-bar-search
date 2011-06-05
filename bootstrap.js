@@ -122,7 +122,7 @@ function addTwitterAddressBarSearch(window) {
   // Add in the twitter search and remove on cleanup
   let origSearch = urlbar.getAttribute("autocompletesearch");
   setSearch("twitter " + origSearch);
-  unload(function() setSearch(origSearch));
+  unload(function() setSearch(origSearch), window);
 }
 
 // Add an autocomplete search engine to provide location bar suggestions
@@ -262,7 +262,7 @@ function ensureTwitterAppTab(window) {
   });
 
   // Always remove the twitter tab when uninstalling
-  unload(function() gBrowser.removeTab(twitterTab));
+  unload(function() gBrowser.removeTab(twitterTab), window);
 
   // No need to add!
   if (twitterTab != null)
@@ -294,7 +294,7 @@ function showLandingPage(window) {
     });
 
     // Always remove the landing page when uninstalling
-    unload(function() gBrowser.removeTab(landingTab));
+    unload(function() gBrowser.removeTab(landingTab), window);
 
     // Add the landing page if not open yet
     if (landingTab == null)
@@ -306,7 +306,7 @@ function showLandingPage(window) {
   else {
     let {BrowserUI} = window;
     let tab = BrowserUI.newTab(LANDING_PAGE);
-    unload(function() BrowserUI.closeTab(tab));
+    unload(function() BrowserUI.closeTab(tab), window);
   }
 
   // Only show the landing page once
