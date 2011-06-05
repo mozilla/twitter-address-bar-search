@@ -1,0 +1,6 @@
+<?xml version="1.0"?> 
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <setting pref="extensions.twitter-address-bar-search.hideChromeForAppTab"
+      type="bool"
+      title="Hide chrome in app tab"/>
+</vbox>

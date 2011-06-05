@@ -11,6 +11,7 @@
 
     <bootstrap>true</bootstrap>
     <type>2</type>
+    <optionsType>2</optionsType>
 
     <contributor>Erik Vold</contributor>
 
