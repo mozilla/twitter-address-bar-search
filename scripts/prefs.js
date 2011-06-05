@@ -18,6 +18,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Edward Lee <edilee@mozilla.com>
  *   Erik Vold <erikvvold@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -34,24 +35,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// Create window.TwitterAddressBarSearch
-(function(window) {
-  var self = window.TwitterAddressBarSearch = {
-    _testFunc: function(aURL) {
-      if (!self.getPref("hideChromeForAppTab")) return false;
-      return /^https?:\/\/(?:\w+\.)?twitter.com/i.test(aURL)
-          && window.gBrowser.selectedTab.hasAttribute(self.TAB_ATTR_NAME);
-    }
-  };
-})(this);
+const PREF_BRANCH = "extensions.twitter-address-bar-search.";
+const PREFS = {
+  hideChromeForAppTab: false
+};
 
-// Overwrite XULBrowserWindow.hideChromeForLocation
-(function(window) {
-  var XULBrowserWindow = window.XULBrowserWindow;
-  var oldFunc = XULBrowserWindow.hideChromeForLocation;
-  XULBrowserWindow.hideChromeForLocation = function(aURL) {
-    var testFunc = window.TwitterAddressBarSearch;
-    if (testFunc) testFunc = testFunc._testFunc;
-    return (testFunc && testFunc(aURL)) || oldFunc.call(XULBrowserWindow, aURL);
-  };
-})(this);
+/**
+ * Get the preference value of type specified in PREFS
+ */
+function getPref(key) {
+  // Cache the prefbranch after first use
+  if (getPref.branch == null)
+    getPref.branch = Services.prefs.getBranch(PREF_BRANCH);
+
+  // Figure out what type of pref to fetch
+  switch (typeof PREFS[key]) {
+    case "boolean":
+      return getPref.branch.getBoolPref(key);
+    case "number":
+      return getPref.branch.getIntPref(key);
+    case "string":
+      return getPref.branch.getCharPref(key);
+  }
+  return null;
+}
+
+/**
+ * Initialize default preferences specified in PREFS
+ */
+function setDefaultPrefs() {
+  let branch = Services.prefs.getDefaultBranch(PREF_BRANCH);
+  for (let [key, val] in Iterator(PREFS)) {
+    switch (typeof val) {
+      case "boolean":
+        branch.setBoolPref(key, val);
+        break;
+      case "number":
+        branch.setIntPref(key, val);
+        break;
+      case "string":
+        branch.setCharPref(key, val);
+        break;
+    }
+  }
+}

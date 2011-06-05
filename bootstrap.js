@@ -259,9 +259,9 @@ function ensureTwitterAppTab(window) {
     return;
   }
 
-  // TODO: need user pref to control this..
-  // Listens to tab selection events
-  function switchChrome(aDisable, aHasAttr) {Services.console.logStringMessage("switchChrome");
+  function switchChrome(aDisable, aHasAttr) {
+    if (!getPref("hideChromeForAppTab")) return;
+
     aHasAttr = aHasAttr || gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
     if (!aHasAttr || aDisable)
       document.documentElement.removeAttribute("disablechrome");
@@ -273,6 +273,7 @@ function ensureTwitterAppTab(window) {
       __SCRIPT_URI_SPEC__ + "/../scripts/browser.js", window);
   window.TwitterAddressBarSearch.openLocation = switchChrome.bind(null, true);
   window.TwitterAddressBarSearch.TAB_ATTR_NAME = TAB_ATTR_NAME;
+  window.TwitterAddressBarSearch.getPref = getPref;
 
   var command = document.getElementById("Browser:OpenLocation");
   command.setAttribute("oncommand",
@@ -358,10 +359,13 @@ function showLandingPage(window) {
  */
 function startup({id}, reason) AddonManager.getAddonByID(id, function(addon) {
   // Load various javascript includes for helper functions
-  ["helper", "utils"].forEach(function(fileName) {
+  ["prefs", "helper", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
+
+  // Always set the default prefs as they disappear on restart
+  setDefaultPrefs();
 
   // Add twitter support to the browser
   watchWindows(addTwitterAddressBarSearch);
