@@ -286,7 +286,7 @@ function ensureTwitterAppTab(window) {
         command.getAttribute("oncommand").replace(/TwitterAddressBarSearch.openLocation\(\);/, ""));
 
     delete window["TwitterAddressBarSearch"];
-  });
+  }, window);
 
 
   // Figure out if we already have a pinned twitter
