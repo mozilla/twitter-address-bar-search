@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Edward Lee <edilee@mozilla.com>
+ *   Erik Vold <erikvvold@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,6 +37,8 @@
 
 "use strict";
 const global = this;
+
+const TAB_ATTR_NAME = "data-twitter";
 
 const {classes: Cc, interfaces: Ci, manager: Cm, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
@@ -245,32 +248,71 @@ function addTwitterSearchEngine() {
 
 // Make sure the window has an app tab set to Twitter
 function ensureTwitterAppTab(window) {
-  // Only bother if we were just installed and support app tabs
-  if (!justInstalled || platform != "desktop")
+  // Only bother continuing if support app tabs
+  if (platform != "desktop")
     return;
 
   // Try again after a short delay if session store is initializing
-  let {__SSi, __SS_restoreID, gBrowser, setTimeout} = window;
+  let {__SSi, __SS_restoreID, gBrowser, setTimeout, document, XULBrowserWindow}
+      = window;
   if (__SSi == null || __SS_restoreID != null) {
     setTimeout(function() ensureTwitterAppTab(window), 1000);
     return;
   }
+
+  function switchChrome(aDisable, aHasAttr) {
+    if (!getPref("hideChromeForAppTab")) return;
+
+    aHasAttr = aHasAttr || gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME);
+    if (!aHasAttr || aDisable)
+      document.documentElement.removeAttribute("disablechrome");
+    else if (aHasAttr)
+      document.documentElement.setAttribute("disablechrome", "true");
+  };
+
+  Services.scriptloader.loadSubScript(
+      __SCRIPT_URI_SPEC__ + "/../scripts/browser.js", window);
+  window.TwitterAddressBarSearch.openLocation = switchChrome.bind(null, true);
+  window.TwitterAddressBarSearch.TAB_ATTR_NAME = TAB_ATTR_NAME;
+  window.TwitterAddressBarSearch.getPref = getPref;
+
+  var command = document.getElementById("Browser:OpenLocation");
+  command.setAttribute("oncommand",
+      "TwitterAddressBarSearch.openLocation();" + command.getAttribute("oncommand"));
+
+  unload(function() {
+    // Cleaning up the open location command modification
+    command.setAttribute("oncommand",
+        command.getAttribute("oncommand").replace(/TwitterAddressBarSearch.openLocation\(\);/, ""));
+
+    delete window["TwitterAddressBarSearch"];
+  }, window);
+
 
   // Figure out if we already have a pinned twitter
   let twitterTab = findOpenTab(gBrowser, function(tab, URI) {
     return tab.pinned && URI.host == "twitter.com";
   });
 
-  // Always remove the twitter tab when uninstalling
-  unload(function() gBrowser.removeTab(twitterTab));
+  // Only add the app tab if one DNE already and the ext was just insatlled
+  if (justInstalled && !twitterTab) {
+    // Add the tab and pin it as the last app tab
+    twitterTab = gBrowser.addTab(getTwitterBase("", "apptab"));
+    gBrowser.pinTab(twitterTab);
+  }
 
-  // No need to add!
-  if (twitterTab != null)
-    return;
+  if (twitterTab) {
+    // Add attribute that'll flag this tab as the one we care about
+    twitterTab.setAttribute(TAB_ATTR_NAME, "true");
 
-  // Add the tab and pin it as the last app tab
-  twitterTab = gBrowser.addTab(getTwitterBase("", "apptab"));
-  gBrowser.pinTab(twitterTab);
+    // disable chrome now if the current tab is the twitter app tab
+    if (gBrowser.selectedTab.hasAttribute(TAB_ATTR_NAME)) {
+      document.documentElement.setAttribute("disablechrome", "true");
+    }
+
+    // Removes the twitter tab when uninstalling
+    unload(function() gBrowser.removeTab(twitterTab));
+  }
 }
 
 // Open a new tab for the landing page and select it
@@ -318,10 +360,13 @@ function showLandingPage(window) {
  */
 function startup({id}, reason) AddonManager.getAddonByID(id, function(addon) {
   // Load various javascript includes for helper functions
-  ["helper", "utils"].forEach(function(fileName) {
+  ["prefs", "helper", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
+
+  // Always set the default prefs as they disappear on restart
+  setDefaultPrefs();
 
   // Add twitter support to the browser
   watchWindows(addTwitterAddressBarSearch);
