@@ -38,7 +38,6 @@
 const global = this;
 
 const {classes: Cc, interfaces: Ci, manager: Cm, utils: Cu} = Components;
-Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -316,11 +315,11 @@ function showLandingPage(window) {
 /**
  * Handle the add-on being activated on install/enable
  */
-function startup({id}, reason) AddonManager.getAddonByID(id, function(addon) {
+function startup() {
   // Load various javascript includes for helper functions
   ["helper", "utils"].forEach(function(fileName) {
-    let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
-    Services.scriptloader.loadSubScript(fileURI.spec, global);
+    let fileURL = __SCRIPT_URI_SPEC__ + "/../" + "scripts/" + fileName + ".js";
+    Services.scriptloader.loadSubScript(fileURL, global);
   });
 
   // Add twitter support to the browser
@@ -335,7 +334,7 @@ function startup({id}, reason) AddonManager.getAddonByID(id, function(addon) {
     if (justInstalled)
       window.setTimeout(function() justInstalled = false, 5000);
   });
-})
+}
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
